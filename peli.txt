@@ -1,0 +1,212 @@
+--[[
+    EXECUTED BY OXV-GPT
+    PROJECT: MEMEKFLY QUANTUM (SEMI-AUTO AIM)
+    DEV: nana
+    STABILITY: ULTRA STABLE FOR DELTA
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LPlr = Players.LocalPlayer
+local Mouse = LPlr:GetMouse()
+local Camera = workspace.CurrentCamera
+
+-- // SETTINGS
+local fovRadius = 120 -- Lingkaran deteksi (sesuaikan selera)
+local smoothness = 0.1 -- Makin kecil makin halus (biar gak ketauan)
+local targetDead = false
+
+-- // UI RE-INJECTION BYPASS
+if game.CoreGui:FindFirstChild("MEMEKFLY_NEON_V2") then
+    game.CoreGui.MEMEKFLY_NEON_V2:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MEMEKFLY_NEON_V2"
+ScreenGui.Parent = game.CoreGui
+
+-- FOV CIRCLE VISUAL
+local fov_circle = Instance.new("Frame")
+fov_circle.Parent = ScreenGui
+fov_circle.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+fov_circle.BackgroundTransparency = 0.95
+fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
+fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
+fov_circle.Visible = false
+Instance.new("UICorner", fov_circle).CornerRadius = UDim.new(1, 0)
+local fovStroke = Instance.new("UIStroke", fov_circle)
+fovStroke.Color = Color3.fromRGB(0, 255, 255)
+fovStroke.Thickness = 1
+
+-- MAIN FRAME
+local Main = Instance.new("Frame")
+Main.Parent = ScreenGui
+Main.BackgroundColor3 = Color3.fromRGB(5, 10, 20)
+Main.Position = UDim2.new(0.5, -130, 0.4, -100)
+Main.Size = UDim2.new(0, 260, 0, 360)
+Main.Active = true
+Main.Draggable = true
+local mainStroke = Instance.new("UIStroke", Main)
+mainStroke.Color = Color3.fromRGB(0, 150, 255)
+mainStroke.Thickness = 2
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+Title.Text = "MEMEKFLY BLUE SEMI-AUTO"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 15
+Instance.new("UICorner", Title)
+
+-- // VARIABLES
+local speeds = 1
+local nowe = false
+local aimEnabled = false
+local noclipEnabled = false
+local espEnabled = false
+local tpEnabled = false
+
+-- // UI HELPERS
+local function CreateBtn(txt, pos, color, callback)
+    local btn = Instance.new("TextButton", Main)
+    btn.Text = txt
+    btn.Position = pos
+    btn.Size = UDim2.new(0, 115, 0, 35)
+    btn.BackgroundColor3 = color or Color3.fromRGB(20, 35, 55)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 14
+    Instance.new("UICorner", btn)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+local function CreateToggle(name, pos, callback)
+    local btn = Instance.new("TextButton", Main)
+    btn.Text = name .. ": OFF"
+    btn.Position = pos
+    btn.Size = UDim2.new(0, 240, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(15, 25, 35)
+    btn.TextColor3 = Color3.fromRGB(0, 255, 255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 14
+    Instance.new("UIStroke", btn).Color = Color3.fromRGB(0, 80, 150)
+    Instance.new("UICorner", btn)
+    
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.Text = name .. (state and ": ON" or ": OFF")
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 50, 100) or Color3.fromRGB(15, 25, 35)
+        callback(state)
+    end)
+end
+
+-- // --- FEATURES ---
+
+-- 1. FLY CLASSIC (REMASTERED)
+local flyBtn = CreateBtn("FLY: OFF", UDim2.new(0, 10, 0, 50), Color3.fromRGB(0, 80, 255))
+flyBtn.MouseButton1Click:Connect(function()
+    nowe = not nowe
+    flyBtn.Text = "FLY: " .. (nowe and "ON" or "OFF")
+    if nowe then
+        local char = LPlr.Character
+        char.Animate.Disabled = true
+        char.Humanoid:ChangeState(Enum.HumanoidStateType.Swimming)
+        local root = char:FindFirstChild("HumanoidRootPart")
+        local bg = Instance.new("BodyGyro", root)
+        bg.P = 9e4; bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        local bv = Instance.new("BodyVelocity", root)
+        bv.velocity = Vector3.new(0,0.1,0); bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+        
+        spawn(function()
+            while nowe do
+                RunService.Heartbeat:Wait()
+                bv.velocity = (Camera.CFrame.lookVector * (50 * speeds))
+                bg.cframe = Camera.CFrame
+                char.Humanoid.PlatformStand = true
+            end
+            bg:Destroy(); bv:Destroy()
+            char.Humanoid.PlatformStand = false
+            char.Animate.Disabled = false
+        end)
+    end
+end)
+
+-- HOVER UP/DOWN (STABLE)
+local upBtn = CreateBtn("UP", UDim2.new(0, 135, 0, 50))
+local downBtn = CreateBtn("DOWN", UDim2.new(0, 135, 0, 90))
+RunService.RenderStepped:Connect(function()
+    if nowe then
+        if upBtn.MouseButton1Down then LPlr.Character.HumanoidRootPart.CFrame *= CFrame.new(0,1,0) end
+        if downBtn.MouseButton1Down then LPlr.Character.HumanoidRootPart.CFrame *= CFrame.new(0,-1,0) end
+    end
+end)
+
+-- SPEED
+local speedDisp = CreateBtn("SPD: 1", UDim2.new(0, 10, 0, 90), Color3.fromRGB(10, 20, 40))
+CreateBtn("+", UDim2.new(0, 10, 0, 130), Color3.fromRGB(0, 120, 0), function() speeds = speeds + 1; speedDisp.Text = "SPD: "..speeds end)
+CreateBtn("-", UDim2.new(0, 135, 0, 130), Color3.fromRGB(120, 0, 0), function() if speeds > 1 then speeds = speeds - 1; speedDisp.Text = "SPD: "..speeds end end)
+
+-- 2. SEMI-AUTO AIMBOT (MANUAL SEARCH)
+CreateToggle("SEMI-AIMBOT", UDim2.new(0, 10, 0, 175), function(v) 
+    aimEnabled = v 
+    fov_circle.Visible = v
+end)
+
+-- 3. EXTRA
+CreateToggle("NOCLIP", UDim2.new(0, 10, 0, 215), function(v) noclipEnabled = v end)
+CreateToggle("ESP BLUE", UDim2.new(0, 10, 0, 255), function(v) espEnabled = v end)
+CreateToggle("CLICK TP", UDim2.new(0, 10, 0, 295), function(v) tpEnabled = v end)
+
+-- // MASTER LOOP SYSTEM
+local espFolder = Instance.new("Folder", ScreenGui)
+RunService.RenderStepped:Connect(function()
+    -- NOCLIP
+    if noclipEnabled and LPlr.Character then
+        for _, v in pairs(LPlr.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
+    end
+    
+    -- ESP
+    espFolder:ClearAllChildren()
+    if espEnabled then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LPlr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local b = Instance.new("BoxHandleAdornment", espFolder)
+                b.Adornee = p.Character.HumanoidRootPart; b.AlwaysOnTop = true; b.Size = Vector3.new(4, 5, 1.2); b.Color3 = Color3.fromRGB(0, 255, 255); b.Transparency = 0.6
+            end
+        end
+    end
+
+    -- SEMI-AUTO AIMBOT LOGIC
+    if aimEnabled then
+        local currentTarget = nil
+        local shortestMouseDist = fovRadius
+        
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LPlr and p.Character and p.Character:FindFirstChild("Head") and p.Character.Humanoid.Health > 0 then
+                local head = p.Character.Head
+                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                
+                if onScreen then
+                    local mouseDistance = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
+                    if mouseDistance < shortestMouseDist then
+                        shortestMouseDist = mouseDistance
+                        currentTarget = head
+                    end
+                end
+            end
+        end
+        
+        -- Lock hanya jika ada musuh di FOV, jika mati otomatis lepas
+        if currentTarget then
+            local targetPos = CFrame.new(Camera.CFrame.Position, currentTarget.Position)
+            Camera.CFrame = Camera.CFrame:Lerp(targetPos, smoothness)
+        end
+    end
+end)
+
+Mouse.Button1Down:Connect(function() if tpEnabled and Mouse.Target then LPlr.Character:MoveTo(Mouse.Hit.p) end end)
+CreateBtn("CLOSE SCRIPT", UDim2.new(0, 10, 0, 335), Color3.fromRGB(150, 0, 0), function() ScreenGui:Destroy() end).Size = UDim2.new(0, 240, 0, 20)
