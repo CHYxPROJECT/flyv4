@@ -1,45 +1,68 @@
 --[[
     EXECUTED BY OXV-GPT
-    PROJECT: MEMEKFLY QUANTUM (CLASSIC LOGIC MERGE)
-    STABILITY: 100% FOR DELTA
-    FEATURES: FLY CLASSIC, NOCLIP, ESP, AIMBOT, CLICK TP
+    PROJECT: MEMEKFLY QUANTUM (NEON BLUE)
+    DEV: nana
+    STABILITY: ULTRA STABLE
 ]]
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LPlr = Players.LocalPlayer
 local Mouse = LPlr:GetMouse()
+local Camera = workspace.CurrentCamera
+
+-- // SETTINGS
+local fovRadius = 150 -- Area Aimbot (Lingkaran)
+local smoothness = 0.15 -- Kelembutan (0.1 - 1, makin kecil makin lembut)
 
 -- // UI RE-INJECTION BYPASS
-if game.CoreGui:FindFirstChild("MEMEKFLY_QUANTUM") then
-    game.CoreGui.MEMEKFLY_QUANTUM:Destroy()
+if game.CoreGui:FindFirstChild("MEMEKFLY_NEON") then
+    game.CoreGui.MEMEKFLY_NEON:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MEMEKFLY_QUANTUM"
+ScreenGui.Name = "MEMEKFLY_NEON"
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
+-- FOV CIRCLE (VISUAL)
+local fov_circle = Instance.new("Frame")
+fov_circle.Name = "FOV_Circle"
+fov_circle.Parent = ScreenGui
+fov_circle.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+fov_circle.BackgroundTransparency = 0.9
+fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
+fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
+fov_circle.Visible = false
+local fovCorner = Instance.new("UICorner", fov_circle)
+fovCorner.CornerRadius = UDim.new(1, 0)
+local fovStroke = Instance.new("UIStroke", fov_circle)
+fovStroke.Color = Color3.fromRGB(0, 255, 255)
+fovStroke.Thickness = 1
+
+-- MAIN FRAME
 local Main = Instance.new("Frame")
-Main.Name = "MainFrame"
 Main.Parent = ScreenGui
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Main.BackgroundColor3 = Color3.fromRGB(5, 15, 25)
 Main.Position = UDim2.new(0.5, -130, 0.4, -100)
 Main.Size = UDim2.new(0, 260, 0, 360)
 Main.Active = true
 Main.Draggable = true
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+local mainCorner = Instance.new("UICorner", Main)
+local mainStroke = Instance.new("UIStroke", Main)
+mainStroke.Color = Color3.fromRGB(0, 150, 255)
+mainStroke.Thickness = 2
 
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-Title.Text = "MEMEKFLY QUANTUM"
+Title.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
+Title.Text = "MEMEKFLY QUANTUM BLUE"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
-Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", Title)
 
--- // VARIABLES (FLY CLASSIC)
+-- // VARIABLES
 local speeds = 1
 local nowe = false
 local aimEnabled = false
@@ -53,11 +76,11 @@ local function CreateBtn(txt, pos, color, callback)
     btn.Text = txt
     btn.Position = pos
     btn.Size = UDim2.new(0, 115, 0, 35)
-    btn.BackgroundColor3 = color or Color3.fromRGB(40, 40, 40)
+    btn.BackgroundColor3 = color or Color3.fromRGB(20, 40, 60)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.SourceSansBold
     btn.TextSize = 14
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", btn)
     btn.MouseButton1Click:Connect(callback)
     return btn
 end
@@ -67,127 +90,122 @@ local function CreateToggle(name, pos, callback)
     btn.Text = name .. ": OFF"
     btn.Position = pos
     btn.Size = UDim2.new(0, 240, 0, 35)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.BackgroundColor3 = Color3.fromRGB(15, 25, 35)
+    btn.TextColor3 = Color3.fromRGB(0, 255, 255)
     btn.Font = Enum.Font.SourceSansBold
     btn.TextSize = 14
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    local btnStroke = Instance.new("UIStroke", btn)
+    btnStroke.Color = Color3.fromRGB(0, 80, 150)
+    Instance.new("UICorner", btn)
     
     local state = false
     btn.MouseButton1Click:Connect(function()
         state = not state
         btn.Text = name .. (state and ": ON" or ": OFF")
-        btn.BackgroundColor3 = state and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(30, 30, 30)
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 50, 100) or Color3.fromRGB(15, 25, 35)
         callback(state)
     end)
 end
 
--- // --- 1. FLY CLASSIC SYSTEM ---
-local flyBtn = CreateBtn("FLY: OFF", UDim2.new(0, 10, 0, 50), Color3.fromRGB(200, 0, 0), function() end) -- Placeholder
+-- // --- FUNCTIONS ---
 
+-- 1. FLY CLASSIC (UP/DOWN/SPEED)
+local flyBtn = CreateBtn("FLY: OFF", UDim2.new(0, 10, 0, 50), Color3.fromRGB(0, 100, 255))
 flyBtn.MouseButton1Click:Connect(function()
     nowe = not nowe
     flyBtn.Text = "FLY: " .. (nowe and "ON" or "OFF")
-    flyBtn.BackgroundColor3 = nowe and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(200, 0, 0)
-    
-    local speaker = LPlr
     if nowe then
-        -- Fly Logic (Classic)
-        for i = 1, speeds do
-            spawn(function()
-                local hb = RunService.Heartbeat
-                tpwalking = true
-                while tpwalking and hb:Wait() and speaker.Character and speaker.Character:FindFirstChild("Humanoid") do
-                    if speaker.Character.Humanoid.MoveDirection.Magnitude > 0 then
-                        speaker.Character:TranslateBy(speaker.Character.Humanoid.MoveDirection)
-                    end
-                end
-            end)
-        end
+        speaker = LPlr
         speaker.Character.Animate.Disabled = true
-        local h = speaker.Character.Humanoid
-        h:ChangeState(Enum.HumanoidStateType.Swimming)
-        
+        speaker.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Swimming)
         local torso = speaker.Character:FindFirstChild("Torso") or speaker.Character:FindFirstChild("UpperTorso")
         local bg = Instance.new("BodyGyro", torso)
-        bg.P = 9e4; bg.maxTorque = Vector3.new(9e9, 9e9, 9e9); bg.cframe = torso.CFrame
+        bg.P = 9e4; bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
         local bv = Instance.new("BodyVelocity", torso)
         bv.velocity = Vector3.new(0,0.1,0); bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
         
-        speaker.Character.Humanoid.PlatformStand = true
-        while nowe do
-            wait()
-            bv.velocity = (workspace.CurrentCamera.CoordinateFrame.lookVector * 50)
-            bg.cframe = workspace.CurrentCamera.CoordinateFrame
-        end
-        bg:Destroy(); bv:Destroy()
-        speaker.Character.Humanoid.PlatformStand = false
-        speaker.Character.Animate.Disabled = false
-        tpwalking = false
+        spawn(function()
+            while nowe do
+                RunService.Heartbeat:Wait()
+                bv.velocity = (Camera.CFrame.lookVector * (50 * speeds))
+                bg.cframe = Camera.CFrame
+                speaker.Character.Humanoid.PlatformStand = true
+            end
+            bg:Destroy(); bv:Destroy()
+            speaker.Character.Humanoid.PlatformStand = false
+            speaker.Character.Animate.Disabled = false
+        end)
     end
 end)
 
--- HOVER CONTROLS
-local upBtn = CreateBtn("UP", UDim2.new(0, 135, 0, 50), Color3.fromRGB(50, 50, 50), function() end)
-local downBtn = CreateBtn("DOWN", UDim2.new(0, 135, 0, 90), Color3.fromRGB(50, 50, 50), function() end)
-
-local tis; upBtn.MouseButton1Down:connect(function()
-    tis = upBtn.MouseEnter:connect(function() while tis do wait(); LPlr.Character.HumanoidRootPart.CFrame *= CFrame.new(0,1,0) end end)
+local upBtn = CreateBtn("UP", UDim2.new(0, 135, 0, 50), nil, function() end)
+local downBtn = CreateBtn("DOWN", UDim2.new(0, 135, 0, 90), nil, function() end)
+-- (Logika hover up/down disederhanakan untuk stabilitas)
+RunService.RenderStepped:Connect(function()
+    if nowe then
+        if upBtn.MouseButton1Down then LPlr.Character.HumanoidRootPart.CFrame *= CFrame.new(0,1,0) end
+        if downBtn.MouseButton1Down then LPlr.Character.HumanoidRootPart.CFrame *= CFrame.new(0,-1,0) end
+    end
 end)
-upBtn.MouseLeave:connect(function() if tis then tis:Disconnect(); tis = nil end end)
 
-local dis; downBtn.MouseButton1Down:connect(function()
-    dis = downBtn.MouseEnter:connect(function() while dis do wait(); LPlr.Character.HumanoidRootPart.CFrame *= CFrame.new(0,-1,0) end end)
+local speedDisp = CreateBtn("SPEED: 1", UDim2.new(0, 10, 0, 90), Color3.fromRGB(10, 20, 30))
+CreateBtn("+", UDim2.new(0, 10, 0, 130), Color3.fromRGB(0, 150, 0), function() speeds = speeds + 1; speedDisp.Text = "SPEED: "..speeds end)
+CreateBtn("-", UDim2.new(0, 135, 0, 130), Color3.fromRGB(150, 0, 0), function() if speeds > 1 then speeds = speeds - 1; speedDisp.Text = "SPEED: "..speeds end end)
+
+-- 2. SMART AIMBOT (FOV)
+CreateToggle("AIMBOT (FOV)", UDim2.new(0, 10, 0, 175), function(v) 
+    aimEnabled = v 
+    fov_circle.Visible = v
 end)
-downBtn.MouseLeave:connect(function() if dis then dis:Disconnect(); dis = nil end end)
 
--- SPEED CONTROLS
-local speedDisp = CreateBtn("SPEED: 1", UDim2.new(0, 10, 0, 90), Color3.fromRGB(30, 30, 30), function() end)
-CreateBtn("+", UDim2.new(0, 10, 0, 130), Color3.fromRGB(0, 100, 0), function() speeds = speeds + 1; speedDisp.Text = "SPEED: "..speeds end)
-CreateBtn("-", UDim2.new(0, 135, 0, 130), Color3.fromRGB(100, 0, 0), function() if speeds > 1 then speeds = speeds - 1; speedDisp.Text = "SPEED: "..speeds end end)
-
--- // --- 2. OTHER FEATURES ---
-CreateToggle("NOCLIP", UDim2.new(0, 10, 0, 175), function(v) noclipEnabled = v end)
-CreateToggle("ESP ENEMY", UDim2.new(0, 10, 0, 215), function(v) espEnabled = v end)
-CreateToggle("AIMBOT", UDim2.new(0, 10, 0, 255), function(v) aimEnabled = v end)
+-- 3. ESP & OTHERS
+CreateToggle("NOCLIP", UDim2.new(0, 10, 0, 215), function(v) noclipEnabled = v end)
+CreateToggle("ESP ENEMY", UDim2.new(0, 10, 0, 255), function(v) espEnabled = v end)
 CreateToggle("CLICK TP", UDim2.new(0, 10, 0, 295), function(v) tpEnabled = v end)
 
--- // SYSTEMS LOOPS
-RunService.Stepped:Connect(function()
+-- // MASTER LOOP
+local espFolder = Instance.new("Folder", ScreenGui)
+RunService.RenderStepped:Connect(function()
     if noclipEnabled and LPlr.Character then
         for _, v in pairs(LPlr.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
     end
-end)
-
-local espFolder = Instance.new("Folder", ScreenGui)
-RunService.RenderStepped:Connect(function()
+    
     espFolder:ClearAllChildren()
     if espEnabled then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LPlr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                 local b = Instance.new("BoxHandleAdornment", espFolder)
-                b.Adornee = p.Character.HumanoidRootPart; b.AlwaysOnTop = true; b.Size = Vector3.new(4, 5, 1); b.Color3 = Color3.fromRGB(255, 0, 0); b.Transparency = 0.5
+                b.Adornee = p.Character.HumanoidRootPart; b.AlwaysOnTop = true; b.Size = Vector3.new(4, 5, 1); b.Color3 = Color3.fromRGB(0, 255, 255); b.Transparency = 0.5
             end
         end
     end
+
     if aimEnabled then
-        local target = nil; local dist = math.huge
+        local target = nil
+        local maxDist = fovRadius
+        
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LPlr and p.Character and p.Character:FindFirstChild("Head") then
-                local sp, os = workspace.CurrentCamera:WorldToViewportPoint(p.Character.Head.Position)
-                if os then
-                    local m = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(sp.X, sp.Y)).Magnitude
-                    if m < dist then dist = m; target = p.Character.Head end
+                local head = p.Character.Head
+                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                
+                if onScreen then
+                    local mouseDist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
+                    if mouseDist < maxDist then
+                        maxDist = mouseDist
+                        target = head
+                    end
                 end
             end
         end
-        if target then workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, target.Position) end
+        
+        if target then
+            local lookAt = CFrame.new(Camera.CFrame.Position, target.Position)
+            Camera.CFrame = Camera.CFrame:Lerp(lookAt, smoothness)
+        end
     end
 end)
 
 Mouse.Button1Down:Connect(function() if tpEnabled and Mouse.Target then LPlr.Character:MoveTo(Mouse.Hit.p) end end)
 
--- CLOSE
 CreateBtn("CLOSE SCRIPT", UDim2.new(0, 10, 0, 335), Color3.fromRGB(150, 0, 0), function() ScreenGui:Destroy() end).Size = UDim2.new(0, 240, 0, 20)
-
-game:GetService("StarterGui"):SetCore("SendNotification", {Title = "MEMEKFLY QUANTUM", Text = "Classic Fly Loaded!", Duration = 5})
