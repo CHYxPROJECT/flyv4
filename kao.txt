@@ -1,0 +1,128 @@
+--[[
+    EXECUTED BY OXV-GPTt
+    PROJECT: MEMEKFLY QUANTUM (SUPER-TUNED AIM)
+    DEV: nana
+    FIX: AIMBOT NOT LOCKING & SENSITIVITY
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LPlr = Players.LocalPlayer
+local Mouse = LPlr:GetMouse()
+local Camera = workspace.CurrentCamera
+
+-- // SETTINGS (Gue naikin biar kerasa lock-nya)
+local fovRadius = 180 -- Gue gedein lingkarannya biar gampang dapet musuh
+local smoothness = 0.25 -- Gue naikin tarikannya biar "nempel" tapi tetep smooth
+
+-- // UI RE-INJECTION BYPASS
+if game.CoreGui:FindFirstChild("MEMEKFLY_FIXED") then
+    game.CoreGui.MEMEKFLY_FIXED:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "MEMEKFLY_FIXED"
+
+-- FOV CIRCLE VISUAL
+local fov_circle = Instance.new("Frame", ScreenGui)
+fov_circle.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
+fov_circle.BackgroundTransparency = 0.9
+fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
+fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
+fov_circle.Visible = false
+Instance.new("UICorner", fov_circle).CornerRadius = UDim.new(1, 0)
+
+-- MAIN FRAME (BIRU GLOW)
+local Main = Instance.new("Frame", ScreenGui)
+Main.BackgroundColor3 = Color3.fromRGB(5, 10, 20)
+Main.Position = UDim2.new(0.5, -130, 0.4, -100)
+Main.Size = UDim2.new(0, 260, 0, 360)
+Main.Active = true
+Main.Draggable = true
+local stroke = Instance.new("UIStroke", Main)
+stroke.Color = Color3.fromRGB(0, 150, 255)
+stroke.Thickness = 2
+Instance.new("UICorner", Main)
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundColor3 = Color3.fromRGB(0, 100, 250)
+Title.Text = "MEMEKFLY QUANTUM [FIXED]"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 15
+
+-- // STATE & FUNCTIONS
+local aimEnabled = false
+local speeds = 1
+local nowe = false
+
+local function CreateToggle(name, pos, callback)
+    local btn = Instance.new("TextButton", Main)
+    btn.Text = name .. ": OFF"
+    btn.Position = pos
+    btn.Size = UDim2.new(0, 240, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(20, 30, 50)
+    btn.TextColor3 = Color3.fromRGB(0, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    Instance.new("UICorner", btn)
+    
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.Text = name .. (state and ": ON" or ": OFF")
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 70, 150) or Color3.fromRGB(20, 30, 50)
+        callback(state)
+    end)
+end
+
+-- BUTTONS
+CreateToggle("SEMI-AIMBOT", UDim2.new(0, 10, 0, 50), function(v) 
+    aimEnabled = v 
+    fov_circle.Visible = v
+end)
+
+-- (Fitur lain gue persingkat biar fokus ke fix Aimbot)
+CreateToggle("NOCLIP", UDim2.new(0, 10, 0, 95), function(v) _G.Noclip = v end)
+CreateToggle("ESP", UDim2.new(0, 10, 0, 140), function(v) _G.ESP = v end)
+
+-- // CORE LOGIC
+RunService.RenderStepped:Connect(function()
+    -- AIMBOT LOGIC (FIXED)
+    if aimEnabled then
+        local target = nil
+        local dist = fovRadius
+        
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LPlr and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
+                -- Cek Head atau Torso (Biar gak pilih-pilih)
+                local head = p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart")
+                if head then
+                    local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                    if onScreen then
+                        local mouseDist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
+                        if mouseDist < dist then
+                            dist = mouseDist
+                            target = head
+                        end
+                    end
+                end
+            end
+        end
+        
+        if target then
+            -- Gerakan Kamera (Lerp)
+            local targetPos = CFrame.new(Camera.CFrame.Position, target.Position)
+            Camera.CFrame = Camera.CFrame:Lerp(targetPos, smoothness)
+        end
+    end
+
+    -- NOCLIP
+    if _G.Noclip and LPlr.Character then
+        for _, v in pairs(LPlr.Character:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
+        end
+    end
+end)
+
+print("AIMBOT FIXED - TIGHTENED LOCK")
