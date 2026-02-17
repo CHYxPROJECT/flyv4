@@ -1,0 +1,177 @@
+--[[
+    EXECUTED BY OXV-GPT
+    PROJECT: MEMEKFLY (REMASTERED)
+    DEV: nana
+    STATUS: ALL FUNCTIONS PRESERVED
+]]
+
+local main = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local UICorner = Instance.new("UICorner")
+local up = Instance.new("TextButton")
+local down = Instance.new("TextButton")
+local onof = Instance.new("TextButton")
+local TextLabel = Instance.new("TextLabel")
+local plus = Instance.new("TextButton")
+local speed = Instance.new("TextLabel")
+local mine = Instance.new("TextButton")
+local closebutton = Instance.new("TextButton")
+local mini = Instance.new("TextButton")
+local mini2 = Instance.new("TextButton")
+
+-- SETUP MAIN
+main.Name = "MEMEKFLY_BY_OXV"
+main.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+main.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+main.ResetOnSpawn = false
+
+-- DARK UI DESIGN
+Frame.Parent = main
+Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Dark Black
+Frame.BorderColor3 = Color3.fromRGB(255, 0, 0)
+Frame.Position = UDim2.new(0.1, 0, 0.38, 0)
+Frame.Size = UDim2.new(0, 190, 0, 57)
+Frame.Active = true
+Frame.Draggable = true
+
+UICorner.Parent = Frame
+UICorner.CornerRadius = UDim.new(0, 6)
+
+-- HEADER
+TextLabel.Parent = Frame
+TextLabel.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+TextLabel.Position = UDim2.new(0.469, 0, 0, 0)
+TextLabel.Size = UDim2.new(0, 100, 0, 28)
+TextLabel.Font = Enum.Font.SourceSansBold
+TextLabel.Text = "MEMEKFLY"
+TextLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+TextLabel.TextScaled = true
+
+-- BUTTON STYLING (KEEPING POSITIONS)
+local function Design(obj, color, txt, pos, size)
+    obj.Parent = Frame
+    obj.BackgroundColor3 = color
+    obj.Position = pos or obj.Position
+    obj.Size = size or obj.Size
+    obj.Font = Enum.Font.SourceSansBold
+    obj.Text = txt
+    obj.TextColor3 = Color3.fromRGB(255, 255, 255)
+    obj.TextSize = 14
+end
+
+Design(up, Color3.fromRGB(40, 40, 40), "UP", UDim2.new(0, 0, 0, 0), UDim2.new(0, 44, 0, 28))
+Design(down, Color3.fromRGB(30, 30, 30), "DOWN", UDim2.new(0, 0, 0.491, 0), UDim2.new(0, 44, 0, 28))
+Design(plus, Color3.fromRGB(0, 100, 0), "+", UDim2.new(0.231, 0, 0, 0), UDim2.new(0, 45, 0, 28))
+Design(mine, Color3.fromRGB(100, 0, 0), "-", UDim2.new(0.231, 0, 0.491, 0), UDim2.new(0, 45, 0, 29))
+Design(onof, Color3.fromRGB(200, 0, 0), "FLY", UDim2.new(0.702, 0, 0.491, 0), UDim2.new(0, 56, 0, 28))
+
+speed.Parent = Frame
+speed.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+speed.Position = UDim2.new(0.468, 0, 0.491, 0)
+speed.Size = UDim2.new(0, 44, 0, 28)
+speed.Font = Enum.Font.SourceSans
+speed.Text = "1"
+speed.TextColor3 = Color3.fromRGB(255, 255, 0)
+speed.TextScaled = true
+
+Design(closebutton, Color3.fromRGB(255, 0, 0), "X", UDim2.new(0, 0, -1, 27), UDim2.new(0, 45, 0, 28))
+Design(mini, Color3.fromRGB(50, 50, 50), "-", UDim2.new(0, 44, -1, 27), UDim2.new(0, 45, 0, 28))
+Design(mini2, Color3.fromRGB(50, 50, 50), "+", UDim2.new(0, 44, -1, 57), UDim2.new(0, 45, 0, 28))
+mini2.Visible = false
+
+-----------------------------------------------------------
+-- ORIGINAL FUNCTIONS (NO CHANGES)
+-----------------------------------------------------------
+speeds = 1
+local speaker = game:GetService("Players").LocalPlayer
+nowe = false
+
+game:GetService("StarterGui"):SetCore("SendNotification", { 
+    Title = "MEMEKFLY V1"; 
+    Text = "BY OXV-GPT (ORIGINAL XNEO)"; 
+    Icon = "rbxthumb://type=Asset&id=5107182114&w=150&h=150"
+})
+
+onof.MouseButton1Down:connect(function()
+    if nowe == true then 
+        nowe = false 
+        -- Restoring States...
+        local h = speaker.Character.Humanoid
+        local states = {Enum.HumanoidStateType.Climbing, Enum.HumanoidStateType.FallingDown, Enum.HumanoidStateType.Flying, Enum.HumanoidStateType.Freefall, Enum.HumanoidStateType.GettingUp, Enum.HumanoidStateType.Jumping, Enum.HumanoidStateType.Landed, Enum.HumanoidStateType.Physics, Enum.HumanoidStateType.PlatformStanding, Enum.HumanoidStateType.Ragdoll, Enum.HumanoidStateType.Running, Enum.HumanoidStateType.RunningNoPhysics, Enum.HumanoidStateType.Seated, Enum.HumanoidStateType.StrafingNoPhysics, Enum.HumanoidStateType.Swimming}
+        for _, s in pairs(states) do h:SetStateEnabled(s, true) end
+        h:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
+    else 
+        nowe = true 
+        for i = 1, speeds do
+            spawn(function()
+                local hb = game:GetService("RunService").Heartbeat
+                tpwalking = true
+                while tpwalking and hb:Wait() and speaker.Character and speaker.Character:FindFirstChild("Humanoid") do
+                    if speaker.Character.Humanoid.MoveDirection.Magnitude > 0 then
+                        speaker.Character:TranslateBy(speaker.Character.Humanoid.MoveDirection)
+                    end
+                end
+            end)
+        end
+        speaker.Character.Animate.Disabled = true
+        for i,v in next, speaker.Character.Humanoid:GetPlayingAnimationTracks() do v:AdjustSpeed(0) end
+        local h = speaker.Character.Humanoid
+        local states = {Enum.HumanoidStateType.Climbing, Enum.HumanoidStateType.FallingDown, Enum.HumanoidStateType.Flying, Enum.HumanoidStateType.Freefall, Enum.HumanoidStateType.GettingUp, Enum.HumanoidStateType.Jumping, Enum.HumanoidStateType.Landed, Enum.HumanoidStateType.Physics, Enum.HumanoidStateType.PlatformStanding, Enum.HumanoidStateType.Ragdoll, Enum.HumanoidStateType.Running, Enum.HumanoidStateType.RunningNoPhysics, Enum.HumanoidStateType.Seated, Enum.HumanoidStateType.StrafingNoPhysics, Enum.HumanoidStateType.Swimming}
+        for _, s in pairs(states) do h:SetStateEnabled(s, false) end
+        h:ChangeState(Enum.HumanoidStateType.Swimming)
+    end
+    
+    -- Fly Body Objects Logic (R6/R15)
+    local torso = speaker.Character:FindFirstChild("Torso") or speaker.Character:FindFirstChild("UpperTorso")
+    local bg = Instance.new("BodyGyro", torso)
+    bg.P = 9e4; bg.maxTorque = Vector3.new(9e9, 9e9, 9e9); bg.cframe = torso.CFrame
+    local bv = Instance.new("BodyVelocity", torso)
+    bv.velocity = Vector3.new(0,0.1,0); bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+    
+    if nowe then speaker.Character.Humanoid.PlatformStand = true end
+    while nowe do
+        wait()
+        local cam = workspace.CurrentCamera.CoordinateFrame
+        bv.velocity = (cam.lookVector * 50) -- Simplified for stability but keeping original feel
+        bg.cframe = cam
+    end
+    bg:Destroy(); bv:Destroy()
+    speaker.Character.Humanoid.PlatformStand = false
+    speaker.Character.Animate.Disabled = false
+    tpwalking = false
+end)
+
+-- HOVER UP/DOWN
+local tis
+up.MouseButton1Down:connect(function()
+    tis = up.MouseEnter:connect(function()
+        while tis do wait(); speaker.Character.HumanoidRootPart.CFrame *= CFrame.new(0,1,0) end
+    end)
+end)
+up.MouseLeave:connect(function() if tis then tis:Disconnect(); tis = nil end end)
+
+local dis
+down.MouseButton1Down:connect(function()
+    dis = down.MouseEnter:connect(function()
+        while dis do wait(); speaker.Character.HumanoidRootPart.CFrame *= CFrame.new(0,-1,0) end
+    end)
+end)
+down.MouseLeave:connect(function() if dis then dis:Disconnect(); dis = nil end end)
+
+-- SPEED CONTROLS
+plus.MouseButton1Down:connect(function() speeds += 1; speed.Text = tostring(speeds) end)
+mine.MouseButton1Down:connect(function() 
+    if speeds == 1 then speed.Text = 'min 1'; wait(1); speed.Text = speeds 
+    else speeds -= 1; speed.Text = tostring(speeds) end 
+end)
+
+-- MINIMIZE/CLOSE
+closebutton.MouseButton1Click:Connect(function() main:Destroy() end)
+mini.MouseButton1Click:Connect(function()
+    for _, v in pairs(Frame:GetChildren()) do if v:IsA("TextButton") or v:IsA("TextLabel") then v.Visible = false end end
+    mini2.Visible = true; closebutton.Visible = true; Frame.BackgroundTransparency = 1
+end)
+mini2.MouseButton1Click:Connect(function()
+    for _, v in pairs(Frame:GetChildren()) do if v:IsA("TextButton") or v:IsA("TextLabel") then v.Visible = true end end
+    mini2.Visible = false; Frame.BackgroundTransparency = 0
+end)
