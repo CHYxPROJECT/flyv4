@@ -1,7 +1,8 @@
 --[[
     EXECUTED BY OXV-GPT
-    PROJECT: MEMEKFLY QUANTUM V4 (ULTRA SMOOTH & SELECTIVE)
+    PROJECT: MEMEKFLY QUANTUM (STRICT CIRCLE LOCK)
     DEV: nana
+    FIX: SCREEN SHAKING & OUTSIDE LOCKING
 ]]
 
 local Players = game:GetService("Players")
@@ -10,46 +11,59 @@ local LPlr = Players.LocalPlayer
 local Mouse = LPlr:GetMouse()
 local Camera = workspace.CurrentCamera
 
--- // CONFIG DYNAMIC
-local AimSmoothness = 0.08 -- Default awal (Sangat Smooth)
-local AimPart = "Head"
-local fovSize = 150
+-- // CONFIG
+local fovRadius = 150 -- Area kunci
+local smoothValue = 0.2 -- Kekuatan kunci (0.1 - 1)
+local targetPart = "Head"
 
 -- // UI RE-INJECTION BYPASS
-if game.CoreGui:FindFirstChild("MEMEKFLY_V4") then
-    game.CoreGui.MEMEKFLY_V4:Destroy()
+if game.CoreGui:FindFirstChild("MEMEKFLY_STRICT") then
+    game.CoreGui.MEMEKFLY_STRICT:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "MEMEKFLY_V4"
+ScreenGui.Name = "MEMEKFLY_STRICT"
 
+-- FOV CIRCLE VISUAL (GLOW BLUE)
+local fov_circle = Instance.new("Frame", ScreenGui)
+fov_circle.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
+fov_circle.BackgroundTransparency = 0.95
+fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
+fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
+fov_circle.Visible = false
+local fovCorner = Instance.new("UICorner", fov_circle)
+fovCorner.CornerRadius = UDim.new(1, 0)
+local fovStroke = Instance.new("UIStroke", fov_circle)
+fovStroke.Color = Color3.fromRGB(0, 200, 255)
+fovStroke.Thickness = 1
+
+-- MAIN FRAME
 local Main = Instance.new("Frame", ScreenGui)
-Main.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-Main.Position = UDim2.new(0.5, -130, 0.35, 0)
-Main.Size = UDim2.new(0, 260, 0, 450)
+Main.BackgroundColor3 = Color3.fromRGB(5, 10, 20)
+Main.Position = UDim2.new(0.5, -130, 0.4, -100)
+Main.Size = UDim2.new(0, 260, 0, 380)
 Main.Active = true
 Main.Draggable = true
-local mainStroke = Instance.new("UIStroke", Main)
-mainStroke.Color = Color3.fromRGB(0, 255, 200)
-mainStroke.Thickness = 2
+local stroke = Instance.new("UIStroke", Main)
+stroke.Color = Color3.fromRGB(0, 150, 255)
+stroke.Thickness = 2
 Instance.new("UICorner", Main)
 
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(0, 150, 150)
-Title.Text = "QUANTUM V4 - ULTRA SMOOTH"
+Title.BackgroundColor3 = Color3.fromRGB(0, 80, 200)
+Title.Text = "QUANTUM - STRICT CIRCLE"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
-Instance.new("UICorner", Title)
 
--- // UI HELPER
+-- // UI HELPERS
 local function CreateBtn(txt, pos, color, callback)
     local btn = Instance.new("TextButton", Main)
     btn.Text = txt
     btn.Position = pos
     btn.Size = UDim2.new(0, 115, 0, 35)
-    btn.BackgroundColor3 = color or Color3.fromRGB(20, 20, 30)
+    btn.BackgroundColor3 = color or Color3.fromRGB(20, 30, 50)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.SourceSansBold
     Instance.new("UICorner", btn)
@@ -57,133 +71,77 @@ local function CreateBtn(txt, pos, color, callback)
     return btn
 end
 
--- // --- FEATURES ---
-
--- 1. AIMBOT & LOCK SYSTEM
+-- FEATURES
 local aimOn = false
-local lockTarget = nil
-
 local aimBtn = CreateBtn("AIMBOT: OFF", UDim2.new(0, 10, 0, 50), Color3.fromRGB(150, 0, 0))
 aimBtn.MouseButton1Click:Connect(function()
     aimOn = not aimOn
     aimBtn.Text = "AIMBOT: " .. (aimOn and "ON" or "OFF")
     aimBtn.BackgroundColor3 = aimOn and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
-    if not aimOn then lockTarget = nil end
+    fov_circle.Visible = aimOn
 end)
 
-local partBtn = CreateBtn("PART: HEAD", UDim2.new(0, 135, 0, 50), Color3.fromRGB(0, 100, 200))
-partBtn.MouseButton1Click:Connect(function()
-    AimPart = (AimPart == "Head" and "HumanoidRootPart" or "Head")
-    partBtn.Text = "PART: " .. (AimPart == "Head" and "HEAD" or "BODY")
+local pBtn = CreateBtn("PART: HEAD", UDim2.new(0, 135, 0, 50), Color3.fromRGB(0, 100, 200))
+pBtn.MouseButton1Click:Connect(function()
+    targetPart = (targetPart == "Head" and "HumanoidRootPart" or "Head")
+    pBtn.Text = "PART: " .. (targetPart == "Head" and "HEAD" or "BODY")
 end)
 
--- 2. SMOOTHNESS CONTROL (Super Important!)
-local smoothDisp = Instance.new("TextLabel", Main)
-smoothDisp.Text = "SMOOTHNESS: " .. AimSmoothness
-smoothDisp.Position = UDim2.new(0, 10, 0, 95)
-smoothDisp.Size = UDim2.new(0, 240, 0, 20)
-smoothDisp.BackgroundTransparency = 1
-smoothDisp.TextColor3 = Color3.fromRGB(0, 255, 255)
-
-CreateBtn("SLOWER (SMOOTH)", UDim2.new(0, 10, 0, 120), Color3.fromRGB(40, 40, 40), function()
-    if AimSmoothness > 0.01 then
-        AimSmoothness = math.floor((AimSmoothness - 0.01) * 100) / 100
-        smoothDisp.Text = "SMOOTHNESS: " .. AimSmoothness
+-- CIRCLE ADJUSTER
+CreateBtn("CIRCLE +", UDim2.new(0, 10, 0, 95), nil, function()
+    fovRadius = fovRadius + 10
+    fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
+    fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
+end)
+CreateBtn("CIRCLE -", UDim2.new(0, 135, 0, 95), nil, function()
+    if fovRadius > 20 then
+        fovRadius = fovRadius - 10
+        fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
+        fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
     end
 end)
 
-CreateBtn("FASTER (SNAP)", UDim2.new(0, 135, 0, 120), Color3.fromRGB(40, 40, 40), function()
-    if AimSmoothness < 0.5 then
-        AimSmoothness = math.floor((AimSmoothness + 0.01) * 100) / 100
-        smoothDisp.Text = "SMOOTHNESS: " .. AimSmoothness
-    end
+-- FLY CLASSIC
+local flyOn = false
+local flyBtn = CreateBtn("FLY: OFF", UDim2.new(0, 10, 0, 140), Color3.fromRGB(0, 80, 255))
+flyBtn.MouseButton1Click:Connect(function()
+    flyOn = not flyOn
+    flyBtn.Text = "FLY: " .. (flyOn and "ON" or "OFF")
 end)
 
--- 3. FOV SETTINGS
-local fovDisp = Instance.new("TextLabel", Main)
-fovDisp.Text = "CIRCLE FOV: " .. fovSize
-fovDisp.Position = UDim2.new(0, 10, 0, 165)
-fovDisp.Size = UDim2.new(0, 240, 0, 20)
-fovDisp.BackgroundTransparency = 1
-fovDisp.TextColor3 = Color3.fromRGB(255, 255, 0)
-
-CreateBtn("FOV +", UDim2.new(0, 10, 0, 190), Color3.fromRGB(30, 30, 30), function()
-    fovSize = fovSize + 10
-    fovDisp.Text = "CIRCLE FOV: " .. fovSize
-end)
-CreateBtn("FOV -", UDim2.new(0, 135, 0, 190), Color3.fromRGB(30, 30, 30), function()
-    if fovSize > 20 then fovSize = fovSize - 10 end
-    fovDisp.Text = "CIRCLE FOV: " .. fovSize
-end)
-
--- 4. MANUAL TARGET SELECTOR
-local selectBtn = CreateBtn("CLICK TO LOCK: OFF", UDim2.new(0, 10, 0, 235), Color3.fromRGB(100, 0, 150))
-local manualMode = false
-selectBtn.MouseButton1Click:Connect(function()
-    manualMode = not manualMode
-    selectBtn.Text = "CLICK TO LOCK: " .. (manualMode and "ON" or "OFF")
-    if not manualMode then lockTarget = nil end
-end)
-
--- // CORE LOGIC
-local fovCircle = Instance.new("Frame", ScreenGui)
-fovCircle.Size = UDim2.new(0, fovSize*2, 0, fovSize*2)
-fovCircle.BackgroundTransparency = 1
-fovCircle.Visible = false
-local stroke = Instance.new("UIStroke", fovCircle)
-stroke.Color = Color3.fromRGB(0, 255, 200)
-stroke.Thickness = 1
-Instance.new("UICorner", fovCircle).CornerRadius = UDim.new(1, 0)
-
+-- // CORE LOGIC (THE FIX)
 RunService.RenderStepped:Connect(function()
-    fovCircle.Visible = aimOn
-    fovCircle.Size = UDim2.new(0, fovSize*2, 0, fovSize*2)
-    fovCircle.Position = UDim2.new(0.5, -fovSize, 0.5, -fovSize)
-
     if aimOn then
-        if manualMode then
-            -- MANUAL TARGETING (Hanya lock yang diklik/dipilih)
-            if Mouse.Target and Mouse.Target.Parent:FindFirstChild("Humanoid") then
-                if game:GetService("UserInputService"):IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-                    lockTarget = Mouse.Target.Parent:FindFirstChild(AimPart)
-                end
-            end
-        else
-            -- AUTO TARGETING (Berdasarkan jarak terdekat di FOV)
-            local closest = nil
-            local dist = fovSize
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= LPlr and p.Character and p.Character:FindFirstChild(AimPart) and p.Character.Humanoid.Health > 0 then
-                    local pos, os = Camera:WorldToViewportPoint(p.Character[AimPart].Position)
-                    if os then
-                        local mDist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
-                        if mDist < dist then
-                            dist = mDist
-                            closest = p.Character[AimPart]
-                        end
+        local target = nil
+        local dist = fovRadius -- Musuh HARUS di dalem fovRadius
+        
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LPlr and p.Character and p.Character:FindFirstChild(targetPart) and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
+                local part = p.Character[targetPart]
+                local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+                
+                if onScreen then
+                    -- Cek apakah musuh beneran ada di dalem Circle
+                    local mouseDist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
+                    if mouseDist < dist then
+                        dist = mouseDist
+                        target = part
                     end
                 end
             end
-            lockTarget = closest
         end
+        
+        -- Lock hanya jika target ditemukan di DALAM area circle
+        if target then
+            local lookAt = CFrame.new(Camera.CFrame.Position, target.Position)
+            Camera.CFrame = Camera.CFrame:Lerp(lookAt, smoothValue)
+        end
+    end
 
-        if lockTarget and lockTarget.Parent and lockTarget.Parent.Humanoid.Health > 0 then
-            local targetPos = CFrame.new(Camera.CFrame.Position, lockTarget.Position)
-            Camera.CFrame = Camera.CFrame:Lerp(targetPos, AimSmoothness)
-        else
-            lockTarget = nil
-        end
+    if flyOn and LPlr.Character then
+        LPlr.Character.HumanoidRootPart.Velocity = Camera.CFrame.LookVector * 100
+        LPlr.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Swimming)
     end
 end)
 
--- MISC
-CreateBtn("NOCLIP", UDim2.new(0, 10, 0, 280), nil, function()
-    _G.noclip = not _G.noclip
-    RunService.Stepped:Connect(function()
-        if _G.noclip and LPlr.Character then
-            for _, v in pairs(LPlr.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
-        end
-    end)
-end)
-
-CreateBtn("CLOSE UI", UDim2.new(0, 135, 0, 280), Color3.fromRGB(100, 0, 0), function() ScreenGui:Destroy() end)
+CreateBtn("CLOSE SCRIPT", UDim2.new(0, 10, 0, 335), Color3.fromRGB(150, 0, 0), function() ScreenGui:Destroy() end).Size = UDim2.new(0, 240, 0, 20)
