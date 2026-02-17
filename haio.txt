@@ -1,8 +1,7 @@
 --[[
-    EXECUTED BY OXV-GPTt
-    PROJECT: MEMEKFLY QUANTUM (SUPER-TUNED AIM)
+    EXECUTED BY OXV-GPT
+    PROJECT: MEMEKFLY V3 (CIRCLE LOCK CUSTOM)
     DEV: nana
-    FIX: AIMBOT NOT LOCKING & SENSITIVITY
 ]]
 
 local Players = game:GetService("Players")
@@ -11,99 +10,142 @@ local LPlr = Players.LocalPlayer
 local Mouse = LPlr:GetMouse()
 local Camera = workspace.CurrentCamera
 
--- // SETTINGS (Gue naikin biar kerasa lock-nya)
-local fovRadius = 180 -- Gue gedein lingkarannya biar gampang dapet musuh
-local smoothness = 0.25 -- Gue naikin tarikannya biar "nempel" tapi tetep smooth
+-- // SETTINGS DEFAULT
+local fovRadius = 150
+local smoothness = 0.3 -- Tarikan lebih kuat (Auto Aim)
+local targetPart = "Head" -- Default Kepala
 
 -- // UI RE-INJECTION BYPASS
-if game.CoreGui:FindFirstChild("MEMEKFLY_FIXED") then
-    game.CoreGui.MEMEKFLY_FIXED:Destroy()
+if game.CoreGui:FindFirstChild("MEMEKFLY_V3") then
+    game.CoreGui.MEMEKFLY_V3:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "MEMEKFLY_FIXED"
+ScreenGui.Name = "MEMEKFLY_V3"
 
 -- FOV CIRCLE VISUAL
 local fov_circle = Instance.new("Frame", ScreenGui)
 fov_circle.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
-fov_circle.BackgroundTransparency = 0.9
+fov_circle.BackgroundTransparency = 0.92
 fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
 fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
 fov_circle.Visible = false
-Instance.new("UICorner", fov_circle).CornerRadius = UDim.new(1, 0)
+local fovCorner = Instance.new("UICorner", fov_circle)
+fovCorner.CornerRadius = UDim.new(1, 0)
+local fovStroke = Instance.new("UIStroke", fov_circle)
+fovStroke.Color = Color3.fromRGB(0, 255, 255)
+fovStroke.Thickness = 1
 
--- MAIN FRAME (BIRU GLOW)
+-- MAIN FRAME
 local Main = Instance.new("Frame", ScreenGui)
-Main.BackgroundColor3 = Color3.fromRGB(5, 10, 20)
-Main.Position = UDim2.new(0.5, -130, 0.4, -100)
-Main.Size = UDim2.new(0, 260, 0, 360)
+Main.BackgroundColor3 = Color3.fromRGB(5, 10, 15)
+Main.Position = UDim2.new(0.5, -130, 0.3, 0)
+Main.Size = UDim2.new(0, 260, 0, 420)
 Main.Active = true
 Main.Draggable = true
-local stroke = Instance.new("UIStroke", Main)
-stroke.Color = Color3.fromRGB(0, 150, 255)
-stroke.Thickness = 2
+local mainStroke = Instance.new("UIStroke", Main)
+mainStroke.Color = Color3.fromRGB(0, 150, 255)
+mainStroke.Thickness = 2
 Instance.new("UICorner", Main)
 
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(0, 100, 250)
-Title.Text = "MEMEKFLY QUANTUM [FIXED]"
+Title.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+Title.Text = "MEMEKFLY V3 - CUSTOM LOCK"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 15
+Title.TextSize = 14
+Instance.new("UICorner", Title)
 
--- // STATE & FUNCTIONS
-local aimEnabled = false
-local speeds = 1
-local nowe = false
-
-local function CreateToggle(name, pos, callback)
+-- // UI HELPERS
+local function CreateBtn(txt, pos, color, callback)
     local btn = Instance.new("TextButton", Main)
-    btn.Text = name .. ": OFF"
+    btn.Text = txt
     btn.Position = pos
-    btn.Size = UDim2.new(0, 240, 0, 35)
-    btn.BackgroundColor3 = Color3.fromRGB(20, 30, 50)
-    btn.TextColor3 = Color3.fromRGB(0, 255, 255)
-    btn.Font = Enum.Font.GothamBold
+    btn.Size = UDim2.new(0, 115, 0, 35)
+    btn.BackgroundColor3 = color or Color3.fromRGB(20, 30, 50)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.SourceSansBold
     Instance.new("UICorner", btn)
-    
-    local state = false
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        btn.Text = name .. (state and ": ON" or ": OFF")
-        btn.BackgroundColor3 = state and Color3.fromRGB(0, 70, 150) or Color3.fromRGB(20, 30, 50)
-        callback(state)
-    end)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
 end
 
--- BUTTONS
-CreateToggle("SEMI-AIMBOT", UDim2.new(0, 10, 0, 50), function(v) 
-    aimEnabled = v 
-    fov_circle.Visible = v
+-- // --- FEATURES ---
+
+-- 1. AIMBOT TOGGLE
+local aimOn = false
+local aimBtn = CreateBtn("AIMBOT: OFF", UDim2.new(0, 10, 0, 50), Color3.fromRGB(150, 0, 0))
+aimBtn.MouseButton1Click:Connect(function()
+    aimOn = not aimOn
+    aimBtn.Text = "AIMBOT: " .. (aimOn and "ON" or "OFF")
+    aimBtn.BackgroundColor3 = aimOn and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+    fov_circle.Visible = aimOn
 end)
 
--- (Fitur lain gue persingkat biar fokus ke fix Aimbot)
-CreateToggle("NOCLIP", UDim2.new(0, 10, 0, 95), function(v) _G.Noclip = v end)
-CreateToggle("ESP", UDim2.new(0, 10, 0, 140), function(v) _G.ESP = v end)
+-- 2. PART SELECTOR
+local partBtn = CreateBtn("TARGET: HEAD", UDim2.new(0, 135, 0, 50), Color3.fromRGB(0, 80, 150))
+partBtn.MouseButton1Click:Connect(function()
+    if targetPart == "Head" then
+        targetPart = "HumanoidRootPart"
+        partBtn.Text = "TARGET: BODY"
+    else
+        targetPart = "Head"
+        partBtn.Text = "TARGET: HEAD"
+    end
+end)
 
--- // CORE LOGIC
+-- 3. CIRCLE SIZE (FOV)
+local fovDisp = Instance.new("TextLabel", Main)
+fovDisp.Text = "CIRCLE SIZE: " .. fovRadius
+fovDisp.Position = UDim2.new(0, 10, 0, 95)
+fovDisp.Size = UDim2.new(0, 240, 0, 25)
+fovDisp.BackgroundTransparency = 1
+fovDisp.TextColor3 = Color3.fromRGB(255, 255, 0)
+fovDisp.Font = Enum.Font.Gotham
+
+CreateBtn("BIGGER (+)", UDim2.new(0, 10, 0, 125), Color3.fromRGB(30, 30, 30), function()
+    fovRadius = fovRadius + 10
+    fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
+    fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
+    fovDisp.Text = "CIRCLE SIZE: " .. fovRadius
+end)
+
+CreateBtn("SMALLER (-)", UDim2.new(0, 135, 0, 125), Color3.fromRGB(30, 30, 30), function()
+    if fovRadius > 20 then
+        fovRadius = fovRadius - 10
+        fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
+        fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
+        fovDisp.Text = "CIRCLE SIZE: " .. fovRadius
+    end
+end)
+
+-- 4. FLY CLASSIC & SPEED (Disederhanakan)
+local flyOn = false
+local speed = 1
+local flyBtn = CreateBtn("FLY: OFF", UDim2.new(0, 10, 0, 170), Color3.fromRGB(0, 100, 255))
+flyBtn.MouseButton1Click:Connect(function()
+    flyOn = not flyOn
+    flyBtn.Text = "FLY: " .. (flyOn and "ON" or "OFF")
+end)
+
+-- // MASTER LOOP
 RunService.RenderStepped:Connect(function()
-    -- AIMBOT LOGIC (FIXED)
-    if aimEnabled then
+    -- AIMBOT CORE
+    if aimOn then
         local target = nil
-        local dist = fovRadius
+        local maxDist = fovRadius
         
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LPlr and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
-                -- Cek Head atau Torso (Biar gak pilih-pilih)
-                local head = p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart")
-                if head then
-                    local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                local part = p.Character:FindFirstChild(targetPart)
+                if part then
+                    local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
                     if onScreen then
                         local mouseDist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
-                        if mouseDist < dist then
-                            dist = mouseDist
-                            target = head
+                        if mouseDist < maxDist then
+                            maxDist = mouseDist
+                            target = part
                         end
                     end
                 end
@@ -111,18 +153,16 @@ RunService.RenderStepped:Connect(function()
         end
         
         if target then
-            -- Gerakan Kamera (Lerp)
-            local targetPos = CFrame.new(Camera.CFrame.Position, target.Position)
-            Camera.CFrame = Camera.CFrame:Lerp(targetPos, smoothness)
+            local lookAt = CFrame.new(Camera.CFrame.Position, target.Position)
+            Camera.CFrame = Camera.CFrame:Lerp(lookAt, smoothness)
         end
     end
-
-    -- NOCLIP
-    if _G.Noclip and LPlr.Character then
-        for _, v in pairs(LPlr.Character:GetDescendants()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
-        end
+    
+    -- FLY SIMPLIFIED
+    if flyOn and LPlr.Character then
+        LPlr.Character.HumanoidRootPart.Velocity = Camera.CFrame.LookVector * (speed * 100)
+        LPlr.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Swimming)
     end
 end)
 
-print("AIMBOT FIXED - TIGHTENED LOCK")
+print("MEMEKFLY V3 ACTIVATED - USE AT OWN RISK")
