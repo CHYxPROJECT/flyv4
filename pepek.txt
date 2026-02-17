@@ -1,0 +1,147 @@
+--[[
+    EXECUTED BY OXV-GPT
+    PROJECT: MEMEKFLY QUANTUM (STRICT CIRCLE LOCK)
+    DEV: nana
+    FIX: SCREEN SHAKING & OUTSIDE LOCKING
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LPlr = Players.LocalPlayer
+local Mouse = LPlr:GetMouse()
+local Camera = workspace.CurrentCamera
+
+-- // CONFIG
+local fovRadius = 150 -- Area kunci
+local smoothValue = 0.2 -- Kekuatan kunci (0.1 - 1)
+local targetPart = "Head"
+
+-- // UI RE-INJECTION BYPASS
+if game.CoreGui:FindFirstChild("MEMEKFLY_STRICT") then
+    game.CoreGui.MEMEKFLY_STRICT:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "MEMEKFLY_STRICT"
+
+-- FOV CIRCLE VISUAL (GLOW BLUE)
+local fov_circle = Instance.new("Frame", ScreenGui)
+fov_circle.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
+fov_circle.BackgroundTransparency = 0.95
+fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
+fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
+fov_circle.Visible = false
+local fovCorner = Instance.new("UICorner", fov_circle)
+fovCorner.CornerRadius = UDim.new(1, 0)
+local fovStroke = Instance.new("UIStroke", fov_circle)
+fovStroke.Color = Color3.fromRGB(0, 200, 255)
+fovStroke.Thickness = 1
+
+-- MAIN FRAME
+local Main = Instance.new("Frame", ScreenGui)
+Main.BackgroundColor3 = Color3.fromRGB(5, 10, 20)
+Main.Position = UDim2.new(0.5, -130, 0.4, -100)
+Main.Size = UDim2.new(0, 260, 0, 380)
+Main.Active = true
+Main.Draggable = true
+local stroke = Instance.new("UIStroke", Main)
+stroke.Color = Color3.fromRGB(0, 150, 255)
+stroke.Thickness = 2
+Instance.new("UICorner", Main)
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundColor3 = Color3.fromRGB(0, 80, 200)
+Title.Text = "QUANTUM - STRICT CIRCLE"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+
+-- // UI HELPERS
+local function CreateBtn(txt, pos, color, callback)
+    local btn = Instance.new("TextButton", Main)
+    btn.Text = txt
+    btn.Position = pos
+    btn.Size = UDim2.new(0, 115, 0, 35)
+    btn.BackgroundColor3 = color or Color3.fromRGB(20, 30, 50)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.SourceSansBold
+    Instance.new("UICorner", btn)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+-- FEATURES
+local aimOn = false
+local aimBtn = CreateBtn("AIMBOT: OFF", UDim2.new(0, 10, 0, 50), Color3.fromRGB(150, 0, 0))
+aimBtn.MouseButton1Click:Connect(function()
+    aimOn = not aimOn
+    aimBtn.Text = "AIMBOT: " .. (aimOn and "ON" or "OFF")
+    aimBtn.BackgroundColor3 = aimOn and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+    fov_circle.Visible = aimOn
+end)
+
+local pBtn = CreateBtn("PART: HEAD", UDim2.new(0, 135, 0, 50), Color3.fromRGB(0, 100, 200))
+pBtn.MouseButton1Click:Connect(function()
+    targetPart = (targetPart == "Head" and "HumanoidRootPart" or "Head")
+    pBtn.Text = "PART: " .. (targetPart == "Head" and "HEAD" or "BODY")
+end)
+
+-- CIRCLE ADJUSTER
+CreateBtn("CIRCLE +", UDim2.new(0, 10, 0, 95), nil, function()
+    fovRadius = fovRadius + 10
+    fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
+    fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
+end)
+CreateBtn("CIRCLE -", UDim2.new(0, 135, 0, 95), nil, function()
+    if fovRadius > 20 then
+        fovRadius = fovRadius - 10
+        fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
+        fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
+    end
+end)
+
+-- FLY CLASSIC
+local flyOn = false
+local flyBtn = CreateBtn("FLY: OFF", UDim2.new(0, 10, 0, 140), Color3.fromRGB(0, 80, 255))
+flyBtn.MouseButton1Click:Connect(function()
+    flyOn = not flyOn
+    flyBtn.Text = "FLY: " .. (flyOn and "ON" or "OFF")
+end)
+
+-- // CORE LOGIC (THE FIX)
+RunService.RenderStepped:Connect(function()
+    if aimOn then
+        local target = nil
+        local dist = fovRadius -- Musuh HARUS di dalem fovRadius
+        
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LPlr and p.Character and p.Character:FindFirstChild(targetPart) and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
+                local part = p.Character[targetPart]
+                local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+                
+                if onScreen then
+                    -- Cek apakah musuh beneran ada di dalem Circle
+                    local mouseDist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
+                    if mouseDist < dist then
+                        dist = mouseDist
+                        target = part
+                    end
+                end
+            end
+        end
+        
+        -- Lock hanya jika target ditemukan di DALAM area circle
+        if target then
+            local lookAt = CFrame.new(Camera.CFrame.Position, target.Position)
+            Camera.CFrame = Camera.CFrame:Lerp(lookAt, smoothValue)
+        end
+    end
+
+    if flyOn and LPlr.Character then
+        LPlr.Character.HumanoidRootPart.Velocity = Camera.CFrame.LookVector * 100
+        LPlr.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Swimming)
+    end
+end)
+
+CreateBtn("CLOSE SCRIPT", UDim2.new(0, 10, 0, 335), Color3.fromRGB(150, 0, 0), function() ScreenGui:Destroy() end).Size = UDim2.new(0, 240, 0, 20)
