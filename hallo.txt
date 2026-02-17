@@ -1,0 +1,155 @@
+--[[
+    EXECUTED BY OXV-GPT
+    PROJECT: MEMEKFLY V5 (PREDATOR)
+    DEV: nana
+    FEATURES: VISIBLE CHECK, STICKY AIM, ESP TRACERS
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LPlr = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Mouse = LPlr:GetMouse()
+
+-- // CONFIG
+local fovRadius = 200
+local aimOn = false
+local espOn = false
+local targetPart = "Head"
+
+-- // UI RE-INJECTION BYPASS
+if game.CoreGui:FindFirstChild("MEMEKFLY_V5") then
+    game.CoreGui.MEMEKFLY_V5:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "MEMEKFLY_V5"
+
+-- FOV CIRCLE
+local fov_circle = Instance.new("Frame", ScreenGui)
+fov_circle.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
+fov_circle.BackgroundTransparency = 0.95
+fov_circle.Position = UDim2.new(0.5, -fovRadius, 0.5, -fovRadius)
+fov_circle.Size = UDim2.new(0, fovRadius*2, 0, fovRadius*2)
+fov_circle.Visible = false
+Instance.new("UICorner", fov_circle).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", fov_circle).Color = Color3.fromRGB(0, 255, 255)
+
+-- MAIN UI
+local Main = Instance.new("Frame", ScreenGui)
+Main.BackgroundColor3 = Color3.fromRGB(5, 10, 20)
+Main.Size = UDim2.new(0, 260, 0, 320)
+Main.Position = UDim2.new(0.5, -130, 0.4, -100)
+Main.Active = true
+Main.Draggable = true
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 150, 255)
+Instance.new("UICorner", Main)
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundColor3 = Color3.fromRGB(0, 80, 255)
+Title.Text = "MEMEKFLY V5 - PREDATOR"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+
+-- // HELPERS
+local function CreateToggle(txt, pos, callback)
+    local btn = Instance.new("TextButton", Main)
+    btn.Text = txt .. ": OFF"
+    btn.Position = pos
+    btn.Size = UDim2.new(0, 240, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(20, 30, 50)
+    btn.TextColor3 = Color3.fromRGB(0, 255, 255)
+    btn.Font = Enum.Font.SourceSansBold
+    Instance.new("UICorner", btn)
+    
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.Text = txt .. (state and ": ON" or ": OFF")
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 80, 150) or Color3.fromRGB(20, 30, 50)
+        callback(state)
+    end)
+end
+
+-- // VISIBLE CHECK FUNCTION
+local function IsVisible(targetPart)
+    local character = targetPart.Parent
+    local ray = Ray.new(Camera.CFrame.Position, (targetPart.Position - Camera.CFrame.Position).Unit * 500)
+    local hit, pos = workspace:FindPartOnRayWithIgnoreList(ray, {LPlr.Character, Camera})
+    
+    if hit and hit:IsDescendantOf(character) then
+        return true
+    end
+    return false
+end
+
+-- // ESP TRACER SYSTEM
+local tracers = {}
+local function CreateTracer()
+    local line = Drawing.new("Line")
+    line.Thickness = 1
+    line.Color = Color3.fromRGB(0, 255, 255)
+    line.Transparency = 1
+    return line
+end
+
+-- TOGGLES
+CreateToggle("AIMBOT STICKY", UDim2.new(0, 10, 0, 50), function(v) 
+    aimOn = v 
+    fov_circle.Visible = v
+end)
+CreateToggle("ESP TRACER", UDim2.new(0, 10, 0, 100), function(v) espOn = v end)
+
+-- // MASTER LOOP
+RunService.RenderStepped:Connect(function()
+    local target = nil
+    local dist = fovRadius
+    
+    -- CLEAR TRACERS
+    for _, l in pairs(tracers) do l.Visible = false end
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LPlr and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
+            local part = p.Character:FindFirstChild(targetPart)
+            if part then
+                local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+                
+                -- ESP TRACER LOGIC
+                if espOn and onScreen then
+                    if not tracers[p.Name] then tracers[p.Name] = CreateTracer() end
+                    local l = tracers[p.Name]
+                    l.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                    l.To = Vector2.new(pos.X, pos.Y)
+                    l.Visible = true
+                end
+
+                -- AIMBOT LOGIC WITH VISIBLE CHECK
+                if aimOn and onScreen then
+                    local mouseDist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
+                    if mouseDist < dist then
+                        -- CEK APAKAH MUSUH TERBUKA (GAK DI BALIK TEMBOK)
+                        if IsVisible(part) then
+                            dist = mouseDist
+                            target = part
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    if aimOn and target then
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
+    end
+end)
+
+-- CLOSE
+local close = Instance.new("TextButton", Main)
+close.Text = "X"
+close.Size = UDim2.new(0, 30, 0, 30)
+close.Position = UDim2.new(1, -35, 0, 5)
+close.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+close.TextColor3 = Color3.fromRGB(255, 255, 255)
+close.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
