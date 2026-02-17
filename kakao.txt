@@ -1,0 +1,190 @@
+--[[
+    EXECUTED BY OXV-GPT
+    PROJECT: MEMEKFLY QUANTUM (SMOOTH AIM EDITION)
+    DEV: nana
+    STABILITY: 100% FOR DELTA
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LPlr = Players.LocalPlayer
+local Mouse = LPlr:GetMouse()
+local Camera = workspace.CurrentCamera
+
+-- // CONFIG
+local smoothValue = 0.15 -- Makin kecil makin smooth (0.05 - 0.2 recommended)
+
+-- // UI RE-INJECTION BYPASS
+if game.CoreGui:FindFirstChild("MEMEKFLY_QUANTUM") then
+    game.CoreGui.MEMEKFLY_QUANTUM:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MEMEKFLY_QUANTUM"
+ScreenGui.Parent = game.CoreGui
+
+local Main = Instance.new("Frame")
+Main.Name = "MainFrame"
+Main.Parent = ScreenGui
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Main.Position = UDim2.new(0.5, -130, 0.4, -100)
+Main.Size = UDim2.new(0, 260, 0, 360)
+Main.Active = true
+Main.Draggable = true
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundColor3 = Color3.fromRGB(0, 120, 255) -- Blue Theme
+Title.Text = "MEMEKFLY QUANTUM SMOOTH"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+Instance.new("UICorner", Title)
+
+-- // VARIABLES
+local speeds = 1
+local nowe = false
+local aimEnabled = false
+local noclipEnabled = false
+local espEnabled = false
+local tpEnabled = false
+
+-- // UI HELPER
+local function CreateBtn(txt, pos, color, callback)
+    local btn = Instance.new("TextButton", Main)
+    btn.Text = txt
+    btn.Position = pos
+    btn.Size = UDim2.new(0, 115, 0, 35)
+    btn.BackgroundColor3 = color or Color3.fromRGB(40, 40, 40)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 14
+    Instance.new("UICorner", btn)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+local function CreateToggle(name, pos, callback)
+    local btn = Instance.new("TextButton", Main)
+    btn.Text = name .. ": OFF"
+    btn.Position = pos
+    btn.Size = UDim2.new(0, 240, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 14
+    Instance.new("UICorner", btn)
+    
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.Text = name .. (state and ": ON" or ": OFF")
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(30, 30, 30)
+        callback(state)
+    end)
+end
+
+-- // --- 1. FLY CLASSIC SYSTEM ---
+local flyBtn = CreateBtn("FLY: OFF", UDim2.new(0, 10, 0, 50), Color3.fromRGB(200, 0, 0))
+
+flyBtn.MouseButton1Click:Connect(function()
+    nowe = not nowe
+    flyBtn.Text = "FLY: " .. (nowe and "ON" or "OFF")
+    flyBtn.BackgroundColor3 = nowe and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(200, 0, 0)
+    
+    if nowe then
+        LPlr.Character.Animate.Disabled = true
+        LPlr.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Swimming)
+        
+        local torso = LPlr.Character:FindFirstChild("HumanoidRootPart")
+        local bg = Instance.new("BodyGyro", torso)
+        bg.P = 9e4; bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        local bv = Instance.new("BodyVelocity", torso)
+        bv.velocity = Vector3.new(0,0.1,0); bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+        
+        LPlr.Character.Humanoid.PlatformStand = true
+        spawn(function()
+            while nowe do
+                RunService.RenderStepped:Wait()
+                bv.velocity = (Camera.CFrame.lookVector * (50 * speeds))
+                bg.cframe = Camera.CFrame
+            end
+            bg:Destroy(); bv:Destroy()
+            LPlr.Character.Humanoid.PlatformStand = false
+            LPlr.Character.Animate.Disabled = false
+        end)
+    end
+end)
+
+-- HOVER
+local upBtn = CreateBtn("UP", UDim2.new(0, 135, 0, 50))
+local downBtn = CreateBtn("DOWN", UDim2.new(0, 135, 0, 90))
+RunService.RenderStepped:Connect(function()
+    if nowe then
+        if upBtn.MouseButton1Down then LPlr.Character.HumanoidRootPart.CFrame *= CFrame.new(0,1,0) end
+        if downBtn.MouseButton1Down then LPlr.Character.HumanoidRootPart.CFrame *= CFrame.new(0,-1,0) end
+    end
+end)
+
+-- SPEED
+local speedDisp = CreateBtn("SPD: 1", UDim2.new(0, 10, 0, 90))
+CreateBtn("+", UDim2.new(0, 10, 0, 130), Color3.fromRGB(0, 100, 0), function() speeds = speeds + 1; speedDisp.Text = "SPD: "..speeds end)
+CreateBtn("-", UDim2.new(0, 135, 0, 130), Color3.fromRGB(100, 0, 0), function() if speeds > 1 then speeds = speeds - 1; speedDisp.Text = "SPD: "..speeds end end)
+
+-- // --- 2. OTHER FEATURES ---
+CreateToggle("NOCLIP", UDim2.new(0, 10, 0, 175), function(v) noclipEnabled = v end)
+CreateToggle("ESP ENEMY", UDim2.new(0, 10, 0, 215), function(v) espEnabled = v end)
+CreateToggle("SMOOTH AIM", UDim2.new(0, 10, 0, 255), function(v) aimEnabled = v end)
+CreateToggle("CLICK TP", UDim2.new(0, 10, 0, 295), function(v) tpEnabled = v end)
+
+-- // SYSTEMS LOOPS
+local espFolder = Instance.new("Folder", ScreenGui)
+
+RunService.RenderStepped:Connect(function()
+    -- NOCLIP
+    if noclipEnabled and LPlr.Character then
+        for _, v in pairs(LPlr.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
+    end
+    
+    -- ESP
+    espFolder:ClearAllChildren()
+    if espEnabled then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LPlr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local b = Instance.new("BoxHandleAdornment", espFolder)
+                b.Adornee = p.Character.HumanoidRootPart; b.AlwaysOnTop = true; b.Size = Vector3.new(4, 5, 1); b.Color3 = Color3.fromRGB(0, 255, 255); b.Transparency = 0.5
+            end
+        end
+    end
+
+    -- SMOOTH AIMBOT LOGIC
+    if aimEnabled then
+        local target = nil
+        local dist = math.huge
+        
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LPlr and p.Character and p.Character:FindFirstChild("Head") and p.Character.Humanoid.Health > 0 then
+                local head = p.Character.Head
+                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                
+                if onScreen then
+                    local mouseDist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
+                    if mouseDist < dist then
+                        dist = mouseDist
+                        target = head
+                    end
+                end
+            end
+        end
+        
+        if target then
+            -- SISTEM LERP (SMOOTHING)
+            local targetPos = CFrame.new(Camera.CFrame.Position, target.Position)
+            Camera.CFrame = Camera.CFrame:Lerp(targetPos, smoothValue)
+        end
+    end
+end)
+
+Mouse.Button1Down:Connect(function() if tpEnabled and Mouse.Target then LPlr.Character:MoveTo(Mouse.Hit.p) end end)
+CreateBtn("CLOSE", UDim2.new(0, 10, 0, 335), Color3.fromRGB(150, 0, 0), function() ScreenGui:Destroy() end).Size = UDim2.new(0, 240, 0, 20)
