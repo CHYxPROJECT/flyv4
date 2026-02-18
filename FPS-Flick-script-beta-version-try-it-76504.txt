@@ -1,0 +1,313 @@
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- State
+local aimbotEnabled = false
+local espEnabled = false
+local fovRadius = 120
+
+local gui
+local fovCircle
+
+-- Create FOV circle
+local function createFOV()
+    if fovCircle then
+        return
+    end
+    fovCircle = Drawing.new("Circle")
+    fovCircle.Radius = fovRadius
+    fovCircle.Thickness = 2
+    fovCircle.Color = Color3.fromRGB(0, 255, 0)
+    fovCircle.Transparency = 0.7
+    fovCircle.Filled = false
+    fovCircle.Visible = aimbotEnabled
+end
+
+-- Line-of-sight check
+local function hasLOS(targetPart)
+    if not targetPart then
+        return false
+    end
+    local cam = workspace.CurrentCamera
+    local origin = cam.CFrame.Position
+    local direction = (targetPart.Position - origin).Unit * 1000
+
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {LocalPlayer.Character}
+
+    local result = workspace:Raycast(origin, direction, params)
+    return result and result.Instance and result.Instance:IsDescendantOf(targetPart.Parent)
+end
+
+-- ESP: create name + distance tag
+local function createESPTag(char, player)
+    if not char then
+        return
+    end
+    local head = char:FindFirstChild("Head")
+    if not head then
+        return
+    end
+    if char:FindFirstChild("ESPTag") then
+        return
+    end
+
+    local tag = Instance.new("BillboardGui")
+    tag.Name = "ESPTag"
+    tag.Size = UDim2.new(0, 200, 0, 50)
+    tag.StudsOffset = Vector3.new(0, 2.5, 0)
+    tag.AlwaysOnTop = true
+    tag.Parent = head
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "Name"
+    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextScaled = true
+    nameLabel.Parent = tag
+
+    local distLabel = Instance.new("TextLabel")
+    distLabel.Name = "Distance"
+    distLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    distLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    distLabel.BackgroundTransparency = 1
+    distLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    distLabel.Font = Enum.Font.Gotham
+    distLabel.TextScaled = true
+    distLabel.Parent = tag
+
+    -- update distance while ESP is enabled
+    RunService.RenderStepped:Connect(function()
+        if not espEnabled then
+            tag.Enabled = false
+            return
+        end
+        local root = char:FindFirstChild("HumanoidRootPart")
+        local cam = workspace.CurrentCamera
+        if not root or not cam then
+            tag.Enabled = false
+            return
+        end
+        local distance = math.floor((root.Position - cam.CFrame.Position).Magnitude)
+        distLabel.Text = tostring(distance) .. "m"
+        tag.Enabled = true
+    end)
+end
+
+-- Setup ESP for a player (persists on respawn)
+local function setupESP(player)
+    local function apply(char)
+        if not espEnabled then
+            return
+        end
+        createESPTag(char, player)
+    end
+
+    if player.Character then
+        apply(player.Character)
+    end
+
+    player.CharacterAdded:Connect(function(char)
+        task.wait(1)
+        apply(char)
+    end)
+end
+
+-- Clear all ESP tags
+local function clearAllESP()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Character and p.Character:FindFirstChild("ESPTag") then
+            p.Character.ESPTag:Destroy()
+        end
+    end
+end
+
+-- Aimbot core loop
+local function startAimbotLoop()
+    RunService.RenderStepped:Connect(function()
+        if not aimbotEnabled then
+            if fovCircle then
+                fovCircle.Visible = false
+            end
+            return
+        end
+
+        if not fovCircle then
+            createFOV()
+        end
+
+        local cam = workspace.CurrentCamera
+        if not cam then
+            return
+        end
+
+        -- center the FOV circle
+        local vp = cam.ViewportSize
+        local center = Vector2.new(vp.X / 2, vp.Y / 2)
+        fovCircle.Position = center
+        fovCircle.Visible = true
+
+        -- find closest visible head inside FOV
+        local closestHead = nil
+        local shortest = math.huge
+
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local head = p.Character:FindFirstChild("Head")
+                if head then
+                    local screenPos, onScreen = cam:WorldToScreenPoint(head.Position)
+                    if onScreen then
+                        local d = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                        if d < fovRadius and d < shortest and hasLOS(head) then
+                            shortest = d
+                            closestHead = head
+                        end
+                    end
+                end
+            end
+        end
+
+        if closestHead then
+            cam.CFrame = CFrame.new(cam.CFrame.Position, closestHead.Position)
+        end
+    end)
+end
+
+-- Build GUI and wire controls
+local function buildGUI()
+    if gui then
+        gui:Destroy()
+    end
+
+    gui = Instance.new("ScreenGui")
+    gui.Name = "FPS_AdminPanel"
+    gui.ResetOnSpawn = false
+    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    -- toggle button
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Name = "Toggle"
+    toggleBtn.Size = UDim2.new(0, 40, 0, 40)
+    toggleBtn.Position = UDim2.new(0, 10, 0.5, -100)
+    toggleBtn.Text = "≡"
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.TextSize = 20
+    toggleBtn.ZIndex = 10
+    toggleBtn.Parent = gui
+
+    -- panel
+    local panel = Instance.new("Frame")
+    panel.Name = "Panel"
+    panel.Size = UDim2.new(0, 220, 0, 150)
+    panel.Position = UDim2.new(0, -230, 0.5, -75) -- hidden offscreen left
+    panel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    panel.BorderSizePixel = 0
+    panel.ClipsDescendants = true
+    panel.Parent = gui
+
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.Text = "Admin Panel"
+    title.TextColor3 = Color3.new(1, 1, 1)
+    title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 16
+    title.Parent = panel
+
+    -- aimbot button
+    local aimbotBtn = Instance.new("TextButton")
+    aimbotBtn.Name = "AimbotBtn"
+    aimbotBtn.Size = UDim2.new(1, -20, 0, 30)
+    aimbotBtn.Position = UDim2.new(0, 10, 0, 40)
+    aimbotBtn.Text = "Aimbot: OFF"
+    aimbotBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    aimbotBtn.TextColor3 = Color3.new(1, 1, 1)
+    aimbotBtn.Font = Enum.Font.Gotham
+    aimbotBtn.TextSize = 14
+    aimbotBtn.Parent = panel
+
+    aimbotBtn.MouseButton1Click:Connect(function()
+        aimbotEnabled = not aimbotEnabled
+        aimbotBtn.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
+        if aimbotEnabled and not fovCircle then
+            createFOV()
+        end
+    end)
+
+    -- esp button
+    local espBtn = Instance.new("TextButton")
+    espBtn.Name = "ESPBtn"
+    espBtn.Size = UDim2.new(1, -20, 0, 30)
+    espBtn.Position = UDim2.new(0, 10, 0, 80)
+    espBtn.Text = "ESP: OFF"
+    espBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    espBtn.TextColor3 = Color3.new(1, 1, 1)
+    espBtn.Font = Enum.Font.Gotham
+    espBtn.TextSize = 14
+    espBtn.Parent = panel
+
+    espBtn.MouseButton1Click:Connect(function()
+        espEnabled = not espEnabled
+        espBtn.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
+        if espEnabled then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer then
+                    setupESP(p)
+                end
+            end
+        else
+            clearAllESP()
+        end
+    end)
+
+    -- open/close tween
+    local open = false
+    toggleBtn.MouseButton1Click:Connect(function()
+        open = not open
+        local goal = { Position = open and UDim2.new(0, 10, 0.5, -75) or UDim2.new(0, -230, 0.5, -75) }
+        TweenService:Create(panel, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal):Play()
+    end)
+end
+
+-- Build GUI and start loops
+local function init()
+    buildGUI()
+    startAimbotLoop()
+
+    -- keep features consistent after new players join
+    Players.PlayerAdded:Connect(function(p)
+        if espEnabled then
+            setupESP(p)
+        end
+    end)
+
+    -- reapply ESP to existing players if toggled on
+    if espEnabled then
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then
+                setupESP(p)
+            end
+        end
+    end
+end
+
+-- initial run
+init()
+
+-- rebuild GUI after respawn
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1)
+    buildGUI()
+end)
